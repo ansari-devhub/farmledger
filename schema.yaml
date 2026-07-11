@@ -1,0 +1,2368 @@
+openapi: 3.0.3
+info:
+  title: FarmLedger API
+  version: 1.0.0
+  description: Farm input & harvest tracking for Kenyan smallholder farmers
+paths:
+  /api/v1/auth/register/:
+    post:
+      operationId: v1_auth_register_create
+      summary: Register a new farm owner account
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+          description: ''
+  /api/v1/auth/token/:
+    post:
+      operationId: v1_auth_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      summary: Login — obtain JWT access + refresh tokens
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: v1_auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      summary: Rotate JWT access token using refresh token
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/crops/:
+    get:
+      operationId: v1_crops_list
+      description: Reference data — admin-managed, read-only for all authenticated
+        users.
+      summary: List all crop types
+      parameters:
+      - in: query
+        name: crop_type
+        schema:
+          type: string
+          enum:
+          - cereal
+          - fruit
+          - legume
+          - other
+          - tuber
+          - vegetable
+        description: |-
+          * `cereal` - Cereal
+          * `legume` - Legume
+          * `vegetable` - Vegetable
+          * `fruit` - Fruit
+          * `tuber` - Tuber
+          * `other` - Other
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      tags:
+      - Reference
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCropList'
+          description: ''
+  /api/v1/crops/{id}/:
+    get:
+      operationId: v1_crops_retrieve
+      description: Reference data — admin-managed, read-only for all authenticated
+        users.
+      summary: Get a crop type
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this crop.
+        required: true
+      tags:
+      - Reference
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Crop'
+          description: ''
+  /api/v1/farms/:
+    get:
+      operationId: v1_farms_list
+      summary: List my farms
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      tags:
+      - Farms
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFarmList'
+          description: ''
+    post:
+      operationId: v1_farms_create
+      summary: Create a farm
+      tags:
+      - Farms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Farm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Farm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Farm'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Farm'
+          description: ''
+  /api/v1/farms/{farm_pk}/buyers/:
+    get:
+      operationId: v1_farms_buyers_list
+      summary: List buyers for a farm
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Buyers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBuyerList'
+          description: ''
+    post:
+      operationId: v1_farms_buyers_create
+      summary: Add a buyer
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Buyers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Buyer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Buyer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Buyer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Buyer'
+          description: ''
+  /api/v1/farms/{farm_pk}/buyers/{id}/:
+    get:
+      operationId: v1_farms_buyers_retrieve
+      summary: Get a buyer
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Buyers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Buyer'
+          description: ''
+    patch:
+      operationId: v1_farms_buyers_partial_update
+      summary: Update a buyer
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Buyers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBuyer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBuyer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBuyer'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Buyer'
+          description: ''
+  /api/v1/farms/{farm_pk}/dashboard/:
+    get:
+      operationId: v1_farms_dashboard_retrieve
+      description: |-
+        Top-level summary per farm across all seasons or a specific one.
+        Cached aggressively — this is the most expensive query.
+      summary: Farm dashboard — season overview and unpaid buyers
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Analytics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/farms/{farm_pk}/seasons/:
+    get:
+      operationId: v1_farms_seasons_list
+      summary: List seasons for a farm
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Seasons
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSeasonList'
+          description: ''
+    post:
+      operationId: v1_farms_seasons_create
+      summary: Create a season
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Seasons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Season'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Season'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Season'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+          description: ''
+  /api/v1/farms/{farm_pk}/seasons/{id}/:
+    get:
+      operationId: v1_farms_seasons_retrieve
+      summary: Get a season
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Seasons
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+          description: ''
+    patch:
+      operationId: v1_farms_seasons_partial_update
+      summary: Update a season
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Seasons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSeason'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSeason'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSeason'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+          description: ''
+  /api/v1/farms/{farm_pk}/workers/:
+    get:
+      operationId: v1_farms_workers_list
+      summary: List workers for a farm
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Labour
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkerList'
+          description: ''
+    post:
+      operationId: v1_farms_workers_create
+      summary: Add a worker
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Worker'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Worker'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Worker'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+          description: ''
+  /api/v1/farms/{farm_pk}/workers/{id}/:
+    get:
+      operationId: v1_farms_workers_retrieve
+      summary: Get a worker
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+          description: ''
+    patch:
+      operationId: v1_farms_workers_partial_update
+      summary: Update worker details
+      parameters:
+      - in: path
+        name: farm_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorker'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorker'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorker'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+          description: ''
+  /api/v1/farms/{id}/:
+    get:
+      operationId: v1_farms_retrieve
+      summary: Get a farm
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Farms
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Farm'
+          description: ''
+    put:
+      operationId: v1_farms_update
+      summary: Update a farm
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Farms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Farm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Farm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Farm'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Farm'
+          description: ''
+    patch:
+      operationId: v1_farms_partial_update
+      summary: Partially update a farm
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Farms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFarm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFarm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFarm'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Farm'
+          description: ''
+    delete:
+      operationId: v1_farms_destroy
+      summary: Delete a farm
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Farms
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/harvests/{harvest_pk}/sales/:
+    get:
+      operationId: v1_harvests_sales_list
+      summary: List sales for a harvest
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: harvest_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Sales
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSaleReadList'
+          description: ''
+    post:
+      operationId: v1_harvests_sales_create
+      summary: Record a sale
+      parameters:
+      - in: path
+        name: harvest_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Sales
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SaleWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SaleWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleWrite'
+          description: ''
+  /api/v1/harvests/{harvest_pk}/sales/{id}/:
+    get:
+      operationId: v1_harvests_sales_retrieve
+      summary: Get a sale
+      parameters:
+      - in: path
+        name: harvest_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Sales
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleRead'
+          description: ''
+    patch:
+      operationId: v1_harvests_sales_partial_update
+      summary: Update payment status
+      parameters:
+      - in: path
+        name: harvest_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Sales
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSaleWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSaleWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSaleWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleWrite'
+          description: ''
+  /api/v1/plantings/:
+    get:
+      operationId: v1_plantings_list
+      summary: List all planting records (scoped to user)
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Plantings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlantingRecordReadList'
+          description: ''
+    post:
+      operationId: v1_plantings_create
+      summary: Record a new planting
+      tags:
+      - Plantings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlantingRecordWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlantingRecordWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlantingRecordWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantingRecordWrite'
+          description: ''
+  /api/v1/plantings/{id}/:
+    get:
+      operationId: v1_plantings_retrieve
+      summary: Get a planting record
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Plantings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantingRecordRead'
+          description: ''
+    patch:
+      operationId: v1_plantings_partial_update
+      summary: Update a planting record
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Plantings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlantingRecordWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlantingRecordWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlantingRecordWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantingRecordWrite'
+          description: ''
+  /api/v1/plantings/{id}/summary/:
+    get:
+      operationId: v1_plantings_summary_retrieve
+      description: |-
+        The answer to the farmer's core question: 'Did I make money on this crop?'
+        Cached for 15 minutes — invalidated by signals on sale/expense changes.
+      summary: Profit/loss summary for a single planting
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Analytics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantingSummary'
+          description: ''
+  /api/v1/plantings/{planting_pk}/expenses/:
+    get:
+      operationId: v1_plantings_expenses_list
+      summary: List input expenses for a planting
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInputExpenseList'
+          description: ''
+    post:
+      operationId: v1_plantings_expenses_create
+      summary: Add an input expense
+      parameters:
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InputExpense'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InputExpense'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InputExpense'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputExpense'
+          description: ''
+  /api/v1/plantings/{planting_pk}/expenses/{id}/:
+    get:
+      operationId: v1_plantings_expenses_retrieve
+      summary: Get an expense
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputExpense'
+          description: ''
+    patch:
+      operationId: v1_plantings_expenses_partial_update
+      summary: Update an expense
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedInputExpense'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedInputExpense'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedInputExpense'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputExpense'
+          description: ''
+    delete:
+      operationId: v1_plantings_expenses_destroy
+      summary: Delete an expense
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/plantings/{planting_pk}/harvests/:
+    get:
+      operationId: v1_plantings_harvests_list
+      summary: List harvests for a planting
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Harvests
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHarvestRecordList'
+          description: ''
+    post:
+      operationId: v1_plantings_harvests_create
+      summary: Record a harvest
+      parameters:
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Harvests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HarvestRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HarvestRecord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HarvestRecord'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HarvestRecord'
+          description: ''
+  /api/v1/plantings/{planting_pk}/harvests/{id}/:
+    get:
+      operationId: v1_plantings_harvests_retrieve
+      summary: Get a harvest record
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Harvests
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HarvestRecord'
+          description: ''
+  /api/v1/plantings/{planting_pk}/labour/:
+    get:
+      operationId: v1_plantings_labour_list
+      summary: List labour logs for a planting
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Labour
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLabourLogList'
+          description: ''
+    post:
+      operationId: v1_plantings_labour_create
+      summary: Log a worker's day(s)
+      parameters:
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabourLog'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LabourLog'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LabourLog'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabourLog'
+          description: ''
+  /api/v1/plantings/{planting_pk}/labour/{id}/:
+    get:
+      operationId: v1_plantings_labour_retrieve
+      summary: Get a labour log entry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabourLog'
+          description: ''
+    patch:
+      operationId: v1_plantings_labour_partial_update
+      summary: Update a labour log
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: planting_pk
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Labour
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLabourLog'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLabourLog'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLabourLog'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabourLog'
+          description: ''
+components:
+  schemas:
+    Buyer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 20
+        location:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+    Crop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        variety:
+          type: string
+          maxLength: 100
+        crop_type:
+          $ref: '#/components/schemas/CropTypeEnum'
+      required:
+      - id
+      - name
+    CropTypeEnum:
+      enum:
+      - cereal
+      - legume
+      - vegetable
+      - fruit
+      - tuber
+      - other
+      type: string
+      description: |-
+        * `cereal` - Cereal
+        * `legume` - Legume
+        * `vegetable` - Vegetable
+        * `fruit` - Fruit
+        * `tuber` - Tuber
+        * `other` - Other
+    Farm:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        location:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+    HarvestRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        harvest_date:
+          type: string
+          format: date
+        quantity_kg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quality_grade:
+          $ref: '#/components/schemas/QualityGradeEnum'
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - harvest_date
+      - id
+      - quantity_kg
+    InputExpense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        input_type:
+          $ref: '#/components/schemas/InputTypeEnum'
+        item_name:
+          type: string
+          maxLength: 200
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit:
+          type: string
+          maxLength: 30
+        amount_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        date_purchased:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_ksh
+      - created_at
+      - date_purchased
+      - id
+      - input_type
+      - item_name
+      - quantity
+      - unit
+    InputTypeEnum:
+      enum:
+      - seed
+      - fertilizer
+      - pesticide
+      - herbicide
+      - equipment
+      - other
+      type: string
+      description: |-
+        * `seed` - Seed
+        * `fertilizer` - Fertilizer
+        * `pesticide` - Pesticide
+        * `herbicide` - Herbicide
+        * `equipment` - Equipment
+        * `other` - Other
+    LabourLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        worker:
+          type: string
+          format: uuid
+        worker_name:
+          type: string
+          readOnly: true
+        work_date:
+          type: string
+          format: date
+        days_worked:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        task_type:
+          $ref: '#/components/schemas/TaskTypeEnum'
+        total_pay_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - total_pay_ksh
+      - work_date
+      - worker
+      - worker_name
+    PaginatedBuyerList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Buyer'
+    PaginatedCropList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Crop'
+    PaginatedFarmList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Farm'
+    PaginatedHarvestRecordList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarvestRecord'
+    PaginatedInputExpenseList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InputExpense'
+    PaginatedLabourLogList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabourLog'
+    PaginatedPlantingRecordReadList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlantingRecordRead'
+    PaginatedSaleReadList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleRead'
+    PaginatedSeasonList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Season'
+    PaginatedWorkerList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Worker'
+    PatchedBuyer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 20
+        location:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedFarm:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        location:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedInputExpense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        input_type:
+          $ref: '#/components/schemas/InputTypeEnum'
+        item_name:
+          type: string
+          maxLength: 200
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit:
+          type: string
+          maxLength: 30
+        amount_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        date_purchased:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedLabourLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        worker:
+          type: string
+          format: uuid
+        worker_name:
+          type: string
+          readOnly: true
+        work_date:
+          type: string
+          format: date
+        days_worked:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        task_type:
+          $ref: '#/components/schemas/TaskTypeEnum'
+        total_pay_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedPlantingRecordWrite:
+      type: object
+      description: Write serializer — accepts FK ids only.
+      properties:
+        season:
+          type: string
+          format: uuid
+        crop:
+          type: string
+          format: uuid
+        date_planted:
+          type: string
+          format: date
+        field_area_acres:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        notes:
+          type: string
+    PatchedSaleWrite:
+      type: object
+      properties:
+        buyer:
+          type: string
+          format: uuid
+        sale_date:
+          type: string
+          format: date
+        kg_sold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        price_per_kg_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        amount_paid_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        payment_date:
+          type: string
+          format: date
+          nullable: true
+    PatchedSeason:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        farm:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedWorker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 20
+        daily_rate_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PaymentStatusEnum:
+      enum:
+      - pending
+      - partial
+      - paid
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `partial` - Partial
+        * `paid` - Paid
+    PlantingRecordRead:
+      type: object
+      description: Enriched read serializer — includes computed totals.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        crop:
+          allOf:
+          - $ref: '#/components/schemas/Crop'
+          readOnly: true
+        season_name:
+          type: string
+          readOnly: true
+        date_planted:
+          type: string
+          format: date
+        field_area_acres:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        total_input_cost_ksh:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - crop
+      - date_planted
+      - field_area_acres
+      - id
+      - season_name
+      - total_input_cost_ksh
+    PlantingRecordWrite:
+      type: object
+      description: Write serializer — accepts FK ids only.
+      properties:
+        season:
+          type: string
+          format: uuid
+        crop:
+          type: string
+          format: uuid
+        date_planted:
+          type: string
+          format: date
+        field_area_acres:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        notes:
+          type: string
+      required:
+      - crop
+      - date_planted
+      - field_area_acres
+      - season
+    PlantingSummary:
+      type: object
+      description: Read-only analytics — not a model serializer.
+      properties:
+        planting_id:
+          type: string
+          format: uuid
+        crop_name:
+          type: string
+        season_name:
+          type: string
+        total_input_cost_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_labour_cost_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_revenue_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        net_profit_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        outstanding_debt_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+      required:
+      - crop_name
+      - net_profit_ksh
+      - outstanding_debt_ksh
+      - planting_id
+      - season_name
+      - total_input_cost_ksh
+      - total_labour_cost_ksh
+      - total_revenue_ksh
+    QualityGradeEnum:
+      enum:
+      - grade_a
+      - grade_b
+      - grade_c
+      - mixed
+      type: string
+      description: |-
+        * `grade_a` - Grade A
+        * `grade_b` - Grade B
+        * `grade_c` - Grade C
+        * `mixed` - Mixed
+    SaleRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        buyer:
+          type: string
+          format: uuid
+        buyer_name:
+          type: string
+          readOnly: true
+        sale_date:
+          type: string
+          format: date
+        kg_sold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        price_per_kg_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        total_amount_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        amount_paid_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        outstanding_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        payment_date:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - buyer
+      - buyer_name
+      - id
+      - kg_sold
+      - outstanding_ksh
+      - price_per_kg_ksh
+      - sale_date
+      - total_amount_ksh
+    SaleWrite:
+      type: object
+      properties:
+        buyer:
+          type: string
+          format: uuid
+        sale_date:
+          type: string
+          format: date
+        kg_sold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        price_per_kg_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        amount_paid_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        payment_date:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - buyer
+      - kg_sold
+      - price_per_kg_ksh
+      - sale_date
+    Season:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        farm:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - farm
+      - id
+      - name
+      - start_date
+    TaskTypeEnum:
+      enum:
+      - planting
+      - weeding
+      - spraying
+      - harvesting
+      - transport
+      - other
+      type: string
+      description: |-
+        * `planting` - Planting
+        * `weeding` - Weeding
+        * `spraying` - Spraying
+        * `harvesting` - Harvesting
+        * `transport` - Transport
+        * `other` - Other
+    TokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - email
+      - password
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    UserRead:
+      type: object
+      description: 'Read-only: used in responses — never exposes password.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - id
+      - name
+      - phone
+    UserRegister:
+      type: object
+      description: 'Write-only: used on POST /auth/register/'
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 20
+      required:
+      - email
+      - name
+      - password
+    Worker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 20
+        daily_rate_ksh:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
