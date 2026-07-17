@@ -12,6 +12,7 @@ class IsFarmOwner(BasePermission):
     Works for: Farm, Season, Buyer, Worker
     """
     message = "You do not own this farm."
+    # DRF uses message(string) to return as detail in the JSON error response when permission is denied.
 
     def has_object_permission(self, request, view, obj):
         # obj could be Farm directly, or something with a .farm FK
@@ -27,7 +28,7 @@ class IsPlantingOwner(BasePermission):
     Walks: obj → planting_record → season → farm → owner
     """
     message = "You do not own the farm this planting belongs to."
-
+    # DRF uses message(string) to return as detail in the JSON error response when permission is denied.
     def has_object_permission(self, request, view, obj):
         planting = getattr(obj, "planting_record", obj)
         return planting.season.farm.owner == request.user

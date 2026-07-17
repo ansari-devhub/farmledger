@@ -19,10 +19,14 @@ jobs:
           POSTGRES_PASSWORD: testpass
         ports:
           - 5432:5432
-        options: >-
+        # Extra Docker run options
+        options: >- 
+          # Health check for PostgreSQL, ask PostgreSQL if it's ready to accept connections
           --health-cmd pg_isready
+          # Health check interval, timeout, and retries
           --health-interval 10s
           --health-timeout 5s
+          # wait for 5s for a reply before retrying, and retry 5 times before giving up
           --health-retries 5
 
       redis:
